@@ -4,9 +4,13 @@ const STAGED_ROOMS_QUEUE = 'STAGED_ROOMS_QUEUE';
 const PLAYING_ROOMS_QUEUE = 'PLAYING_ROOMS_QUEUE';
 const MAX_ROOM_NUM_USED = 'MAX_ROOM_NUM_USED';
 
+const CREATE_ROOM_TOKEN = 'CREATE_ROOM_TOKEN';
+
 class GameCache {
   constructor(redisClient){
     this.redisClient = redisClient || new Redis(process.env.REDIS_CONNECTION_URL);
+    this.redisClient.set(MAX_ROOM_NUM_USED, -1);
+    this.redisClient.lpush(CREATE_ROOM_TOKEN, 'GREEN');
   }
   /**
    * @function {createNewRoom}
@@ -15,14 +19,10 @@ class GameCache {
    */
   async createNewRoom(){
     // get the largest num used for a room already(largest + 1)
-    const roomNum = parseInt(await this.redisClient.get(MAX_ROOM_NUM_USED), 10) || 0;
+    const roomNum = await this.redisClient.incr(MAX_ROOM_NUM_USED);
     const roomName = `room#${roomNum}`;
 
-    await this.redisClient.multi()
-      .lpush(STAGED_ROOMS_QUEUE, roomName)
-      .hset(MAX_ROOM_NUM_USED, `${roomNum + 1}`)// increase the largest room num used num by 1
-      .exec();
-
+    await this.redisClient.lpush(STAGED_ROOMS_QUEUE, roomName);
     return roomName;
   };
   /**
@@ -146,13 +146,19 @@ class GameCache {
    * @returns {promise} resolves to a string name of the room avaiable to join
   */
   async getAvaiableRoom(){
+    await this.redisClient.blpop(CREATE_ROOM_TOKEN, 0);// critical section
+
     const rooms = await this.redisClient.lrange(STAGED_ROOMS_QUEUE, 0, 0);
 
+    let room = '';
     if (rooms.length === 1) { // we are fetching one room, so that is the expected size
-      return rooms[0];
+      room = rooms[0];
     } else {
-      return await this.createNewRoom();
+      room = await this.createNewRoom();
+      await this.unlockRoomJoins(room);
     }
+    await this.redisClient.lpush(CREATE_ROOM_TOKEN, 'PASS');// release critical section
+    return room;
   }
   /**
    * @function {startGameInRoom}
@@ -160,16 +166,18 @@ class GameCache {
    * @param roomName (string) name of redis queue for this room
    * @returns {promise} resolves to the status of the operation in redis
   */
-  startGameInRoom(roomName){
-    return this.redisClient.multi()
-      .lrem(STAGED_ROOMS_QUEUE, -1, roomName)
-      .lpush(PLAYING_ROOMS_QUEUE, roomName)
-      .exec();
+  async startGameInRoom(roomName){
+    const isDeleted = await this.redisClient.lrem(STAGED_ROOMS_QUEUE, -1, roomName);
+    if (isDeleted) {
+      return this.redisClient.lpush(PLAYING_ROOMS_QUEUE, roomName);
+    } else {
+      return false;
+    }
   }
 
   /**
-   * @function {startGameInRoom}
-   * @summary moves a room from staging to playing state
+   * @function {endGameInRoom}
+   * @summary removes a playing room from the cache
    * @param roomName (string) name of redis queue for this room
    * @returns {promise} resolves to the status of the operation in redis
   */
@@ -178,6 +186,26 @@ class GameCache {
       .lrem(PLAYING_ROOMS_QUEUE, -1, roomName)
       .del(roomName)
       .exec();
+  }
+
+  /**
+   * @function {lockRoomJoins}
+   * @summary locks any new join requests to this room, and if already lock it will block till unlocked
+   * @param roomName (string) name of redis queue for this room
+   * @returns {promise} resolves to the status of the operation in redis
+  */
+  lockRoomJoins(roomName){
+    return this.redisClient.blpop(`${roomName}_lock_token`, 0);
+  }
+
+  /**
+   * @function {lockRoomJoins}
+   * @summary unlocks joining to this room
+   * @param roomName (string) name of redis queue for this room
+   * @returns {promise} resolves to the status of the operation in redis
+  */
+  unlockRoomJoins(roomName){
+    return this.redisClient.lpush(`${roomName}_lock_token`, 'GREEN_LIGHT');
   }
 }
 module.exports = {
