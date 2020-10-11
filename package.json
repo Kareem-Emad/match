@@ -1,0 +1,40 @@
+{
+  "name": "match",
+  "version": "0.1.0",
+  "description": "match is a multiplayer game server that manages all logic behind starting a new game, matching/connecting online players, inviting friends to a game for you so you could focus on building your awesome game wihtout worrying about such networking details.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --timeout 5000 --exit",
+    "lint": "eslint --ignore-path .eslintignore ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kareem-Emad/match.git"
+  },
+  "keywords": [
+    "sockets",
+    "redis",
+    "game development",
+    "game server"
+  ],
+  "author": "kareem emad",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Kareem-Emad/match/issues"
+  },
+  "homepage": "https://github.com/Kareem-Emad/match#readme",
+  "devDependencies": {
+    "sinon": "^9.2.0",
+    "lodash": "^4.17.20",
+    "mocha": "^7.0.1",
+    "eslint": "^7.0.0",
+    "eslint-config-strongloop": "^2.1.0",
+    "eslint-plugin-mocha": "^7.0.1",
+    "ioredis-mock": "^4.21.8"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "ioredis": "^4.17.3",
+    "socket.io": "^2.3.0"
+  }
+}

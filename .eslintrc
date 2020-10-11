@@ -1,0 +1,19 @@
+{
+  "extends": ["strongloop"],
+  "plugins": [
+    "mocha"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module"
+  },
+  "rules": {
+    "max-len": [2, 140, 8],
+    "prefer-spread": "error"
+  },
+  "env": {
+    "node": true,
+    "es6": true,
+    "mocha": true
+  }
+}
