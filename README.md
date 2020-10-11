@@ -1,4 +1,4 @@
-# match
+# Match
 
 [![Build Status:](https://github.com/Kareem-Emad/match/workflows/Build/badge.svg)](https://github.com/Kareem-Emad/match/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -32,6 +32,7 @@ npm start
 - [ ] Friends Invite and private rooms
 - [ ] out of the box web sdk(js)
 - [ ] out of the box android sdk
+- [ ] jwt Authentication
 
 ## SDK
 
