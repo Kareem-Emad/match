@@ -2,11 +2,13 @@ const { GameCache } = require('./cache');
 const { verifyTokenSignature } = require('./auth');
 
 const MAX_PLAYERS = process.env.MAX_PLAYERS_IN_GAME || 2;
+const MIN_PLAYERS = process.env.MIN_PLAYERS_IN_GAME || 2;
 
 class SocketEventsHandler {
-  constructor(gameCache, max_players) {
+  constructor(gameCache, max_players, min_players) {
     this.gameCache = gameCache || new GameCache();
     this.maxPlayersAllowed = max_players || MAX_PLAYERS;
+    this.minPlayersAllowed = min_players || MIN_PLAYERS;
 
     this.events = {
       leaveEvent: 'leave',
@@ -17,6 +19,8 @@ class SocketEventsHandler {
       newPlayerEvent: 'new_player',
       playerDisconnectedEvent: 'disconnect',
       playerEndGameEvent: 'end_game_notification',
+      playerReadyEvent: 'player_ready',
+      announcePlayerReadyEvent: 'player_ready_announcement',
     };
   }
 
@@ -38,6 +42,7 @@ class SocketEventsHandler {
       this.handlePairRequest(socket);
       this.handleGameEnded(socket);
       this.handleLeaveRequest(socket);
+      this.handlePlayerReady(socket);
     }
   }
 
@@ -150,8 +155,31 @@ class SocketEventsHandler {
       socket.to(room).emit(context.events.gameEndedEvent, {});
     });
   }
-}
 
+  /**
+   * @function {handlePlayerReady}
+   * @summary handles broadcasting event that player is ready to start game and starts the game if min players present
+   * @param socket (SocketIO.Socket) socket object of the connected client
+   */
+  handlePlayerReady(socket) {
+    const context = this;
+    socket.on(this.events.playerReadyEvent, async function() {
+
+      const room = socket.rooms[socket.rooms.length - 1];
+      const readyCount = await context.gameCache.markPlayerAsReady(socket.client.id, room);
+
+      socket.to(room).emit(context.events.announcePlayerReadyEvent, {
+        user_id: socket.client.id,
+        username: socket.handshake.query.username,
+        total_ready_count: readyCount,
+      });
+
+      if (readyCount >= context.minPlayersAllowed) {
+        await context.handleGameStart(socket, room);
+      }
+    });
+  }
+}
 module.exports = {
   SocketEventsHandler,
 };

@@ -175,7 +175,7 @@ describe('socket events', function(){
 
     const eventsSet = socketEventsHandler.events;
     const hookedEvents = [`$${eventsSet.playerDisconnectedEvent}`, `$${eventsSet.pairRequestEvent}`,
-      `$${eventsSet.playerEndGameEvent}`, `$${eventsSet.playerLeaveEvent}`];
+      `$${eventsSet.playerEndGameEvent}`, `$${eventsSet.playerLeaveEvent}`, `$${eventsSet.playerReadyEvent}`];
 
     assert.deepStrictEqual(Object.keys(socket._callbacks), hookedEvents);
 
@@ -407,6 +407,86 @@ describe('socket events', function(){
     socket2.client = {id: 300};
     socketEventsHandler.handleConnect(socket2);
     socket2.socketClient.emit(socketEventsHandler.events.pairRequestEvent, {});
+
+  });
+
+
+  it('should announce ready players and update their status in the cache', function(done) {
+    const socket = new SocketMock();
+    const gameCache = new GameCache(redisMock);
+    const socketEventsHandler = new SocketEventsHandler(gameCache);
+
+    socket.disconnect = function(flag) {
+      assert.fail('should not call disconnect for a valid client');
+    };
+    socket.to = function(room) {
+      assert.equal('room#0', room);
+      return socket;
+    };
+
+    socket.socketClient.on(socketEventsHandler.events.newPlayerEvent, async function(message){
+      socket.socketClient.emit(socketEventsHandler.events.playerReadyEvent, {});
+    });
+
+    socket.socketClient.on(socketEventsHandler.events.announcePlayerReadyEvent, async function(message){
+      assert.deepStrictEqual(message, {
+        total_ready_count: 1,
+        user_id: 200,
+        username: 'testak',
+      });
+
+      assert.equal((await gameCache.getPlayerInfo(200)).ready, true);
+      assert.equal(await gameCache.getReadyCountInRoom('room#0'), 1);
+
+      done();
+    });
+
+    socket.handshake = {query: {username: 'testak', token: 'some_token'}};
+    socket.client = {id: 200};
+    socketEventsHandler.handleConnect(socket);
+    socket.socketClient.emit(socketEventsHandler.events.pairRequestEvent, {});
+
+  });
+
+
+  it('should start the game if ready players surpass the min players threshold to start a game', function(done) {
+    const socket = new SocketMock();
+    const socket2 = new SocketMock();
+
+    const gameCache = new GameCache(redisMock);
+    const socketEventsHandler = new SocketEventsHandler(gameCache);
+
+    socket.disconnect = function(flag) {
+      assert.fail('should not call disconnect for a valid client');
+    };
+    socket.to = function(room) {
+      assert.equal('room#0', room);
+      return socket;
+    };
+
+    socket2.to = function(room) {
+      assert.equal('room#0', room);
+      return socket;
+    };
+
+    socket.socketClient.on(socketEventsHandler.events.newPlayerEvent, async function(message){
+      socket.socketClient.emit(socketEventsHandler.events.playerReadyEvent, {});
+    });
+
+    socket.socketClient.on(socketEventsHandler.events.gameStartedEvent, async function(message){
+
+      done();
+    });
+
+    socket.handshake = {query: {username: 'testak', token: 'some_token'}};
+    socket.client = {id: 200};
+    socketEventsHandler.handleConnect(socket);
+    socket.socketClient.emit(socketEventsHandler.events.pairRequestEvent, {});
+
+    socket.handshake = {query: {username: 'testak', token: 'some_token'}};
+    socket.client = {id: 200};
+    socketEventsHandler.handleConnect(socket);
+    socket.socketClient.emit(socketEventsHandler.events.pairRequestEvent, {});
 
   });
 });

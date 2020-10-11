@@ -4,6 +4,7 @@
   "description": "match is a multiplayer game server that manages all logic behind starting a new game, matching/connecting online players, inviting friends to a game for you so you could focus on building your awesome game wihtout worrying about such networking details.",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "mocha --timeout 5000 --exit",
     "lint": "eslint --ignore-path .eslintignore ."
   },

@@ -22,7 +22,10 @@ class GameCache {
     const roomNum = await this.redisClient.incr(MAX_ROOM_NUM_USED);
     const roomName = `room#${roomNum}`;
 
-    await this.redisClient.lpush(STAGED_ROOMS_QUEUE, roomName);
+    await this.redisClient.multi()
+      .lpush(STAGED_ROOMS_QUEUE, roomName)
+      .set(`${roomName}_ready_count`, 0)
+      .exec();
     return roomName;
   };
   /**
@@ -98,8 +101,18 @@ class GameCache {
    * @param playerID (string) id of the player(could be socket client id)
    * @returns {promise} resolves to the status of the operation in redis
    */
-  leaveRoom(roomName, playerID){
-    return this.redisClient.lrem(roomName, -1, playerID);
+  async leaveRoom(roomName, playerID){
+    const playerInfo = await this.getPlayerInfo(playerID);
+    if (playerInfo) {
+      playerInfo.ready = false;
+    }
+
+
+    return await this.redisClient.multi()
+      .lrem(roomName, -1, playerID)
+      .decr(`${roomName}_ready_count`)
+      .set(playerID, JSON.stringify(playerInfo))
+      .exec();
   };
 
   /**
@@ -199,13 +212,47 @@ class GameCache {
   }
 
   /**
-   * @function {lockRoomJoins}
+   * @function {unlockRoomJoins}
    * @summary unlocks joining to this room
    * @param roomName (string) name of redis queue for this room
    * @returns {promise} resolves to the status of the operation in redis
   */
   unlockRoomJoins(roomName){
     return this.redisClient.lpush(`${roomName}_lock_token`, 'GREEN_LIGHT');
+  }
+
+  /**
+   * @function {markPlayerAsReady}
+   * @summary marks player as ready in cache and updates room ready count
+   * @param playerID (string) id of the player(could be socket client id)
+   * @param room (string) name of redis queue for this room
+   * @returns {promise} resolves to the status of the operation in redis
+  */
+  async markPlayerAsReady(playerID, room){
+    const palyerInfo = await this.getPlayerInfo(playerID);
+
+    if (palyerInfo.ready) {
+      return await this.getReadyCountInRoom(room);
+    } else {
+      palyerInfo.ready = true;
+    }
+
+    const trxResult = await this.redisClient.multi()
+      .incr(`${room}_ready_count`)
+      .set(playerID, JSON.stringify(palyerInfo))
+      .exec();
+
+    return trxResult[0][1];
+  }
+
+  /**
+   * @function {getReadyCountInRoom}
+   * @summary get number of ready players in the room
+   * @param room (string) name of redis queue for this room
+   * @returns {promise} resolves to the status of the operation in redis
+  */
+  async getReadyCountInRoom(room){
+    return parseInt(await this.redisClient.get(`${room}_ready_count`), 10);
   }
 }
 module.exports = {
