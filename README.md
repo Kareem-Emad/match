@@ -3,7 +3,7 @@
 [![Build Status:](https://github.com/Kareem-Emad/match/workflows/Build/badge.svg)](https://github.com/Kareem-Emad/match/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-match is a multiplayer game server that manages all logic behind starting a new game, matching/connecting online players, inviting friends to a game for you so you could focus on building the game itself wihtout worrying about such networking details.
+match is a multiplayer game server that manages all logic behind starting a new game, matching/connecting online players, inviting friends to a game for you so you could focus on building the game itself without worrying about such networking details.
 
 ## Setup
 
@@ -30,10 +30,10 @@ npm start
 - [x] Supports starting matches with players between min/max allowed using `ready` consent by users.
 - [ ] In game chat
 - [ ] Friends Invite and private rooms
-- [ ] out of the box web sdk(js)
+- [x] web sdk(js) [beta]
 - [ ] out of the box android sdk
 - [ ] jwt Authentication
 
 ## SDK
 
-TBA
+JS: <https://github.com/Kareem-Emad/match-js>
