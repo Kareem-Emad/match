@@ -4,8 +4,8 @@ const SocketMock = require('socket.io-mock');
 
 const { describe, it} = require('mocha');
 
-const { GameCache } = require('../cache');
-const { SocketEventsHandler } = require('../socket-events');
+const { GameCache } = require('../cache/cache');
+const { SocketEventsHandler } = require('../socket-events/socket-events');
 
 
 const redisMock = new Redis();

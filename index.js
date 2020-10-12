@@ -1,4 +1,4 @@
-const { SocketEventsHandler } = require('./socket-events');
+const { SocketEventsHandler } = require('./socket-events/socket-events');
 
 const app = require('express')();
 const http = require('http').createServer(app);

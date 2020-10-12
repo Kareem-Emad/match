@@ -1,5 +1,5 @@
-const { GameCache } = require('./cache');
-const { verifyTokenSignature } = require('./auth');
+const { GameCache } = require('../cache/cache');
+const { verifyTokenSignature } = require('../auth/auth');
 
 const MAX_PLAYERS = process.env.MAX_PLAYERS_IN_GAME || 2;
 const MIN_PLAYERS = process.env.MIN_PLAYERS_IN_GAME || 2;
